@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
   Clock, 
@@ -24,9 +23,7 @@ import {
   Link as LinkIcon,
   AlertTriangle,
   Shield,
-  CheckCircle,
-  Download,
-  Plus
+  Download
 } from 'lucide-react';
 import { statusOptions, mockUsers } from '@/lib/mockData';
 import { toast } from 'sonner';
@@ -35,11 +32,12 @@ import { TimelineTab } from '@/components/incident/TimelineTab';
 import { ChainOfCustodyTab } from '@/components/incident/ChainOfCustodyTab';
 import { NotesTab } from '@/components/incident/NotesTab';
 import { IncidentStatus } from '@/lib/types';
+import { downloadIncidentReport } from '@/lib/pdfGenerator';
 
 export default function IncidentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getIncident, updateIncident } = useData();
+  const { getIncident, updateIncident, evidence } = useData();
   const { user, hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -98,8 +96,20 @@ export default function IncidentDetail() {
           </div>
           <h1 className="text-2xl font-bold">{incident.title}</h1>
         </div>
-        {canEdit && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => {
+              const incidentEvidence = evidence.filter(e => e.incident_id === incident.id);
+              downloadIncidentReport(incident, incidentEvidence);
+              toast.success('PDF report generated', { description: `${incident.id}-report.pdf downloaded` });
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Export PDF
+          </Button>
+          {canEdit && (
             <Select value={incident.status} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue />
@@ -110,8 +120,8 @@ export default function IncidentDetail() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
