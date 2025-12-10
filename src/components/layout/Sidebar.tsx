@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Wrench,
-  Users
+  Users,
+  ScrollText
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Incidents', href: '/incidents', icon: Folder, roles: ['first_responder', 'investigator', 'manager', 'admin'] },
   { name: 'Forensic Tools', href: '/tools', icon: Wrench, roles: ['investigator', 'manager', 'admin'] },
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['manager', 'admin'] },
+  { name: 'Audit Logs', href: '/audit-logs', icon: ScrollText, roles: ['manager', 'admin'] },
   { name: 'Users', href: '/users', icon: Users, roles: ['admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
