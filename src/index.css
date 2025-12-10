@@ -42,6 +42,8 @@
     --status-medium: 48 96% 53%;
     --status-low: 142 76% 36%;
     --status-info: 213 94% 58%;
+    --status-success: 142 76% 36%;
+    --status-warning: 48 96% 53%;
 
     /* Badge backgrounds */
     --badge-critical-bg: 0 84% 60%;
@@ -72,6 +74,49 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 15%;
     --sidebar-ring: 213 94% 58%;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 213 94% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 213 94% 48%;
+
+    /* Shadows for light mode */
+    --shadow-glow: 0 0 20px hsl(213 94% 58% / 0.15);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.1), 0 1px 2px hsl(0 0% 0% / 0.06);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 213 94% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 213 94% 48%;
   }
 
   .dark {

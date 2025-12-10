@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { Bell, LogOut, Search, User } from 'lucide-react';
+import { Bell, LogOut, Search, User, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -37,7 +38,10 @@ export function Header() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -100,6 +104,10 @@ export function Header() {
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive">

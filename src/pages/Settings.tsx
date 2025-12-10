@@ -15,11 +15,17 @@ import {
   Mail, 
   Clock,
   Save,
-  RefreshCw
+  RefreshCw,
+  Palette,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Settings() {
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState({
     // General
     incidentPrefix: 'INC',
@@ -86,6 +92,10 @@ export default function Settings() {
           <TabsTrigger value="general" className="gap-2">
             <SettingsIcon className="h-4 w-4" />
             General
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="gap-2">
+            <Palette className="h-4 w-4" />
+            Appearance
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
@@ -178,6 +188,75 @@ export default function Settings() {
                       <SelectItem value="ja">日本語</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Appearance Settings */}
+        <TabsContent value="appearance">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Appearance</CardTitle>
+              <CardDescription>Customize the look and feel of the application</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-foreground">Theme</Label>
+                <p className="text-sm text-muted-foreground mb-4">Select your preferred color scheme</p>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                      theme === 'light' 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-white border flex items-center justify-center">
+                      <Sun className="h-6 w-6 text-amber-500" />
+                    </div>
+                    <span className="font-medium text-foreground">Light</span>
+                    {theme === 'light' && (
+                      <span className="text-xs text-primary">Active</span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                      theme === 'dark' 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                      <Moon className="h-6 w-6 text-slate-300" />
+                    </div>
+                    <span className="font-medium text-foreground">Dark</span>
+                    {theme === 'dark' && (
+                      <span className="text-xs text-primary">Active</span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setTheme('system')}
+                    className={`flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                      theme === 'system' 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-slate-900 border flex items-center justify-center">
+                      <Monitor className="h-6 w-6 text-slate-500" />
+                    </div>
+                    <span className="font-medium text-foreground">System</span>
+                    {theme === 'system' && (
+                      <span className="text-xs text-primary">Active</span>
+                    )}
+                  </button>
                 </div>
               </div>
             </CardContent>

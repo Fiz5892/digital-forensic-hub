@@ -67,6 +67,8 @@ export default {
           medium: "hsl(var(--status-medium))",
           low: "hsl(var(--status-low))",
           info: "hsl(var(--status-info))",
+          success: "hsl(var(--status-success))",
+          warning: "hsl(var(--status-warning))",
         },
       },
       borderRadius: {
