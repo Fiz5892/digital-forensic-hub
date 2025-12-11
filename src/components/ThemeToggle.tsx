@@ -1,4 +1,4 @@
-import { Moon, Sun, Monitor } from 'lucide-react';
+import { Moon, Sun, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,17 +9,21 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+
+  const getIcon = () => {
+    switch (theme) {
+      case 'light': return <Sun className="h-4 w-4" />;
+      case 'cyber': return <Leaf className="h-4 w-4" />;
+      default: return <Moon className="h-4 w-4" />;
+    }
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-9 w-9">
-          {resolvedTheme === 'dark' ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
+          {getIcon()}
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
@@ -34,10 +38,10 @@ export function ThemeToggle() {
           Dark
           {theme === 'dark' && <span className="ml-auto text-primary">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('system')} className="gap-2">
-          <Monitor className="h-4 w-4" />
-          System
-          {theme === 'system' && <span className="ml-auto text-primary">✓</span>}
+        <DropdownMenuItem onClick={() => setTheme('cyber')} className="gap-2">
+          <Leaf className="h-4 w-4" />
+          Cyber Green
+          {theme === 'cyber' && <span className="ml-auto text-primary">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
