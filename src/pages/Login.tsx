@@ -1,50 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Shield, Eye, EyeOff, Lock, Mail, AlertCircle, User, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email('Email tidak valid'),
+  password: z.string().min(1, 'Password wajib diisi'),
+});
+
+const signupSchema = z.object({
+  fullName: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  email: z.string().email('Email tidak valid'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Password tidak cocok",
+  path: ["confirmPassword"],
+});
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [activeTab, setActiveTab] = useState('login');
+  
+  // Login state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  
+  // Signup state
+  const [signupFullName, setSignupFullName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [success, setSuccess] = useState('');
+  
+  const { login, signup, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+
+    // Validate input
+    const validation = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        toast.success('Login successful', {
-          description: 'Welcome to DFIR-Manager'
+      const { error } = await login(loginEmail, loginPassword);
+      if (error) {
+        setError(error);
+      } else {
+        toast.success('Login berhasil', {
+          description: 'Selamat datang di DFIR-Manager'
         });
         navigate('/dashboard');
-      } else {
-        setError('Invalid email or password');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const demoUsers = [
-    { email: 'reporter@dfir.com', role: 'Reporter' },
-    { email: 'responder@dfir.com', role: 'First Responder' },
-    { email: 'investigator@dfir.com', role: 'Investigator' },
-    { email: 'manager@dfir.com', role: 'Manager' },
-    { email: 'admin@dfir.com', role: 'Admin' },
-  ];
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validate input
+    const validation = signupSchema.safeParse({ 
+      fullName: signupFullName,
+      email: signupEmail, 
+      password: signupPassword,
+      confirmPassword: signupConfirmPassword
+    });
+    
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await signup(signupEmail, signupPassword, signupFullName);
+      if (error) {
+        setError(error);
+      } else {
+        setSuccess('Akun berhasil dibuat! Silakan login.');
+        setActiveTab('login');
+        setLoginEmail(signupEmail);
+        // Clear signup form
+        setSignupFullName('');
+        setSignupEmail('');
+        setSignupPassword('');
+        setSignupConfirmPassword('');
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <span className="text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -96,7 +185,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Auth Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
           {/* Mobile Logo */}
@@ -105,89 +194,196 @@ export default function Login() {
             <h1 className="text-2xl font-bold text-gradient">DFIR-Manager</h1>
           </div>
 
-          <div className="text-center lg:text-left">
-            <h2 className="text-2xl font-bold">Welcome back</h2>
-            <p className="text-muted-foreground mt-2">Sign in to access the incident management system</p>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="signup">Daftar</TabsTrigger>
+            </TabsList>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                <AlertCircle className="h-4 w-4" />
-                {error}
+            <TabsContent value="login" className="space-y-6 mt-6">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl font-bold">Selamat datang kembali</h2>
+                <p className="text-muted-foreground mt-2">Masuk untuk mengakses sistem</p>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+              <form onSubmit={handleLogin} className="space-y-4">
+                {error && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-500 text-sm">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                    {success}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="name@company.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="login-password"
+                      type={showLoginPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      Masuk...
+                    </span>
+                  ) : (
+                    'Masuk'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup" className="space-y-6 mt-6">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl font-bold">Buat akun baru</h2>
+                <p className="text-muted-foreground mt-2">Daftar untuk mengakses sistem</p>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
+              <form onSubmit={handleSignup} className="space-y-4">
+                {error && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Signing in...
-                </span>
-              ) : (
-                'Sign in'
-              )}
-            </Button>
-          </form>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Nama Lengkap</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={signupFullName}
+                      onChange={(e) => setSignupFullName(e.target.value)}
+                      className="pl-10"
+                      required
+                      autoComplete="name"
+                    />
+                  </div>
+                </div>
 
-          {/* Demo Credentials */}
-          <div className="glass-card rounded-lg p-4 space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">Demo Accounts (password: pass123)</p>
-            <div className="grid grid-cols-2 gap-2">
-              {demoUsers.map((user) => (
-                <button
-                  key={user.email}
-                  onClick={() => {
-                    setEmail(user.email);
-                    setPassword('pass123');
-                  }}
-                  className="text-left p-2 rounded-md hover:bg-muted/50 transition-colors text-xs"
-                >
-                  <p className="font-medium text-foreground">{user.role}</p>
-                  <p className="text-muted-foreground truncate">{user.email}</p>
-                </button>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="name@company.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? 'text' : 'password'}
+                      placeholder="Minimal 6 karakter"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm">Konfirmasi Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-confirm"
+                      type={showSignupPassword ? 'text' : 'password'}
+                      placeholder="Ulangi password"
+                      value={signupConfirmPassword}
+                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      Mendaftar...
+                    </span>
+                  ) : (
+                    'Daftar'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Dengan masuk atau mendaftar, Anda menyetujui{' '}
+            <a href="#" className="text-primary hover:underline">Ketentuan Layanan</a>
+            {' '}dan{' '}
+            <a href="#" className="text-primary hover:underline">Kebijakan Privasi</a>
+          </p>
         </div>
       </div>
     </div>

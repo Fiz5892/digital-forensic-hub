@@ -66,7 +66,7 @@ export default function IncidentDetail() {
   };
 
   const handleAssign = (userId: string) => {
-    const assignee = mockUsers.find(u => u.id === parseInt(userId));
+    const assignee = mockUsers.find(u => u.id === userId);
     if (assignee) {
       updateIncident(incident.id, { assigned_to: { id: assignee.id, name: assignee.name } });
       toast.success('Assigned', { description: `Incident assigned to ${assignee.name}` });

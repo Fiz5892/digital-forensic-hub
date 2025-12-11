@@ -56,7 +56,7 @@ export default function UserManagement() {
     }
 
     const newUser: User = {
-      id: Math.max(...users.map(u => u.id)) + 1,
+      id: String(Math.max(...users.map(u => parseInt(u.id))) + 1),
       name: formData.name,
       email: formData.email,
       role: formData.role,
@@ -85,8 +85,8 @@ export default function UserManagement() {
     toast.success('User updated successfully');
   };
 
-  const handleDeleteUser = (userId: number) => {
-    if (userId === 5) {
+  const handleDeleteUser = (userId: string) => {
+    if (userId === '5') {
       toast.error('Cannot delete the admin user');
       return;
     }

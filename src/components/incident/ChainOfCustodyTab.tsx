@@ -62,7 +62,7 @@ export function ChainOfCustodyTab({ incidentId }: ChainOfCustodyTabProps) {
     const targetEvidence = evidence.find(e => e.id === selectedEvidenceId);
     if (!targetEvidence) return;
 
-    const toUser = mockUsers.find(u => u.id === parseInt(transfer.to));
+    const toUser = mockUsers.find(u => u.id === transfer.to);
     if (!toUser) return;
 
     const newTransfer: CustodyTransfer = {
