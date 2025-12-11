@@ -108,7 +108,7 @@ export default function ReportIncident() {
       },
       timeline: [
         {
-          id: 1,
+          id: '1',
           timestamp: new Date().toISOString(),
           event: 'Incident reported via DFIR system',
           type: 'report',

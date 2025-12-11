@@ -46,7 +46,7 @@ export function NotesTab({ incident }: NotesTabProps) {
     if (!newNote.content || !user) return;
 
     const note: IncidentNote = {
-      id: incident.notes.length + 1,
+      id: String(incident.notes.length + 1),
       content: newNote.content,
       category: newNote.category,
       created_by: { id: user.id, name: user.name },

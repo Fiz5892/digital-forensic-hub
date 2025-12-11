@@ -66,7 +66,7 @@ export function TimelineTab({ incident }: TimelineTabProps) {
     if (!newEvent.event || !user) return;
 
     const newTimelineEvent: TimelineEvent = {
-      id: incident.timeline.length + 1,
+      id: String(incident.timeline.length + 1),
       timestamp: new Date(newEvent.timestamp).toISOString(),
       event: newEvent.event,
       type: newEvent.type,

@@ -1,7 +1,7 @@
 export type UserRole = 'reporter' | 'first_responder' | 'investigator' | 'manager' | 'admin';
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: UserRole;
@@ -40,7 +40,7 @@ export interface TechnicalDetails {
 }
 
 export interface TimelineEvent {
-  id: number;
+  id: string;
   timestamp: string;
   event: string;
   type: 'detection' | 'report' | 'assignment' | 'evidence' | 'analysis' | 'containment' | 'reporting' | 'closure';
@@ -54,8 +54,8 @@ export interface Incident {
   type: IncidentType;
   status: IncidentStatus;
   priority: IncidentPriority;
-  reporter: { id: number; name: string; email: string };
-  assigned_to?: { id: number; name: string };
+  reporter: { id: string; name: string; email: string };
+  assigned_to?: { id: string; name: string };
   created_at: string;
   updated_at: string;
   closed_at?: string;
@@ -68,10 +68,10 @@ export interface Incident {
 }
 
 export interface IncidentNote {
-  id: number;
+  id: string;
   content: string;
   category: 'hypothesis' | 'finding' | 'action_item' | 'question';
-  created_by: { id: number; name: string };
+  created_by: { id: string; name: string };
   created_at: string;
 }
 
@@ -93,9 +93,9 @@ export interface Evidence {
   file_size: number;
   hash_md5: string;
   hash_sha256: string;
-  collected_by: { id: number; name: string };
+  collected_by: { id: string; name: string };
   collected_at: string;
-  current_custodian: { id: number; name: string };
+  current_custodian: { id: string; name: string };
   storage_location: string;
   analysis_status: 'pending' | 'analyzing' | 'analyzed' | 'archived';
   integrity_status: 'verified' | 'tampered' | 'unknown';
