@@ -19,7 +19,7 @@ import {
   Palette,
   Sun,
   Moon,
-  Monitor
+  Leaf
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -242,18 +242,18 @@ export default function Settings() {
                   </button>
 
                   <button
-                    onClick={() => setTheme('system')}
+                    onClick={() => setTheme('cyber')}
                     className={`flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all ${
-                      theme === 'system' 
+                      theme === 'cyber' 
                         ? 'border-primary bg-primary/5' 
                         : 'border-border hover:border-primary/50'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-slate-900 border flex items-center justify-center">
-                      <Monitor className="h-6 w-6 text-slate-500" />
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-900 to-black border border-emerald-500/50 flex items-center justify-center">
+                      <Leaf className="h-6 w-6 text-emerald-400" />
                     </div>
-                    <span className="font-medium text-foreground">System</span>
-                    {theme === 'system' && (
+                    <span className="font-medium text-foreground">Cyber Green</span>
+                    {theme === 'cyber' && (
                       <span className="text-xs text-primary">Active</span>
                     )}
                   </button>
