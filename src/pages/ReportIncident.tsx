@@ -22,8 +22,8 @@ import {
   AlertTriangle,
   Globe,
   Server,
-  FileText,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react';
 import { incidentTypes, priorityOptions } from '@/lib/mockData';
 import { Incident, IncidentPriority, IncidentType } from '@/lib/types';
@@ -41,6 +41,7 @@ export default function ReportIncident() {
   const { addIncident, getNextIncidentId } = useData();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -78,53 +79,69 @@ export default function ReportIncident() {
     }
   };
 
-  const handleSubmit = () => {
-    if (!user) return;
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error('You must be logged in to submit an incident');
+      return;
+    }
 
-    const incidentId = getNextIncidentId();
-    const newIncident: Incident = {
-      id: incidentId,
-      title: formData.title,
-      description: formData.description,
-      type: formData.type as IncidentType,
-      status: 'new',
-      priority: formData.priority,
-      reporter: { id: user.id, name: user.name, email: user.email },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      impact_assessment: {
-        confidentiality: formData.confidentiality,
-        integrity: formData.integrity,
-        availability: formData.availability,
-        business_impact: formData.business_impact,
-      },
-      technical_details: {
-        target_url: formData.target_url,
-        ip_address: formData.ip_address || 'Unknown',
-        server_os: formData.server_os || 'Unknown',
-        web_server: formData.web_server || 'Unknown',
-        cms: formData.cms || 'Unknown',
-        database: formData.database || 'Unknown',
-      },
-      timeline: [
-        {
-          id: '1',
-          timestamp: new Date().toISOString(),
-          event: 'Incident reported via DFIR system',
-          type: 'report',
-          user: user.name,
-        }
-      ],
-      evidence_ids: [],
-      notes: [],
-      regulatory_requirements: [],
-    };
+    setIsSubmitting(true);
 
-    addIncident(newIncident);
-    toast.success('Incident reported successfully', {
-      description: `Incident ${incidentId} has been created`
-    });
-    navigate(`/incidents/${incidentId}`);
+    try {
+      const incidentId = getNextIncidentId();
+      const newIncident: Incident = {
+        id: incidentId,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type as IncidentType,
+        status: 'new',
+        priority: formData.priority,
+        reporter: { id: user.id, name: user.name, email: user.email },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        impact_assessment: {
+          confidentiality: formData.confidentiality,
+          integrity: formData.integrity,
+          availability: formData.availability,
+          business_impact: formData.business_impact,
+        },
+        technical_details: {
+          target_url: formData.target_url,
+          ip_address: formData.ip_address || 'Unknown',
+          server_os: formData.server_os || 'Unknown',
+          web_server: formData.web_server || 'Unknown',
+          cms: formData.cms || 'Unknown',
+          database: formData.database || 'Unknown',
+        },
+        timeline: [
+          {
+            id: '1',
+            timestamp: new Date().toISOString(),
+            event: 'Incident reported via DFIR system',
+            type: 'report',
+            user: user.name,
+          }
+        ],
+        evidence_ids: [],
+        notes: [],
+        regulatory_requirements: [],
+      };
+
+      await addIncident(newIncident);
+      
+      toast.success('Incident reported successfully', {
+        description: `Incident ${incidentId} has been created and saved to database`
+      });
+      
+      navigate(`/incidents/${incidentId}`);
+    } catch (error) {
+      console.error('Error submitting incident:', error);
+      toast.error('Failed to submit incident', {
+        description: 'Please try again or contact support'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -461,7 +478,7 @@ export default function ReportIncident() {
                 <div>
                   <p className="font-medium text-primary">Ready to Submit</p>
                   <p className="text-sm text-muted-foreground">
-                    Once submitted, the incident will be assigned an ID and routed for triage. 
+                    Once submitted, the incident will be saved to the database and assigned an ID. 
                     You'll receive notifications on status updates.
                   </p>
                 </div>
@@ -475,7 +492,7 @@ export default function ReportIncident() {
           <Button
             variant="outline"
             onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || isSubmitting}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Previous
@@ -490,9 +507,18 @@ export default function ReportIncident() {
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} className="gap-2">
-              <Check className="h-4 w-4" />
-              Submit Incident
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  Submit Incident
+                </>
+              )}
             </Button>
           )}
         </div>

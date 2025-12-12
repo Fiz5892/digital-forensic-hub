@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase Connection</title>
+</head>
+<body>
+    <h1>Testing Supabase Connection</h1>
+    <div id="result"></div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        const supabaseUrl = 'https://tabyowzzrnedlfswaimn.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhYnlvd3p6cm5lZGxmc3dhaW1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNTAxMjMsImV4cCI6MjA4MDgyNjEyM30._vNvpglADD5QzN8m-aar4aTMRddeTODrQkvuoLjf4hg';
+
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        async function testConnection() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing connection...';
+
+            try {
+                // Test basic connection
+                const { data, error } = await supabase.from('users').select('*').limit(1);
+
+                if (error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Connection failed: ${error.message}</p>`;
+                    console.error('Supabase error:', error);
+                } else {
+                    resultDiv.innerHTML = `
+                        <p style="color: green;">✅ Connection successful!</p>
+                        <p>Users found: ${data.length}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    console.log('Connection successful:', data);
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+                console.error('Error:', err);
+            }
+        }
+
+        // Run test when page loads
+        testConnection();
+    </script>
+</body>
+</html>

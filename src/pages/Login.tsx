@@ -228,7 +228,7 @@ export default function Login() {
                     <Input
                       id="login-email"
                       type="email"
-                      placeholder="name@company.com"
+                      placeholder="name@gmail.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="pl-10"
@@ -296,7 +296,7 @@ export default function Login() {
                     <Input
                       id="signup-name"
                       type="text"
-                      placeholder="John Doe"
+                      placeholder="Your Name"
                       value={signupFullName}
                       onChange={(e) => setSignupFullName(e.target.value)}
                       className="pl-10"
@@ -313,7 +313,7 @@ export default function Login() {
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="name@company.com"
+                      placeholder="name@gmail.com"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       className="pl-10"

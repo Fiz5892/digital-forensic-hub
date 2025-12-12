@@ -10,10 +10,8 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem('dfir_theme');
-    return (stored as Theme) || 'dark';
-  });
+  // Default to dark theme (no localStorage)
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -23,7 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem('dfir_theme', newTheme);
+    // Theme preference persists only during current session
   };
 
   return (
