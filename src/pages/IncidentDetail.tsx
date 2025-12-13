@@ -212,6 +212,7 @@ export default function IncidentDetail() {
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="custody">Chain of Custody</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="forensic-tools">Forensic Tools</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
