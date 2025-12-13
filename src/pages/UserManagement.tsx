@@ -10,12 +10,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { UserPlus, Pencil, Trash2, Key, Search, Shield, Users, Loader2, AlertCircle, UserCog, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 // Supabase Client Setup
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cgvdwgdqawkvjehuqlao.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndmR3Z2RxYXdrdmplaHVxbGFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDA2NDMsImV4cCI6MjA4MTExNjY0M30.Usu3U5pM_RBCS9-xaQ9cxsPpnPP9Zhu2A0dwc7SE5Vw';
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Department options
+const DEPARTMENTS = [
+  'Security Operations Center (SOC)',
+  'IT Security',
+  'Information Technology',
+  'Network Operations',
+  'Cybersecurity',
+  'Digital Forensics',
+  'Incident Response',
+  'Compliance & Audit',
+  'Risk Management',
+  'Other'
+];
 
 // Types
 type UserRole = 'admin' | 'manager' | 'investigator' | 'first_responder' | 'reporter';
@@ -68,13 +83,18 @@ export default function UserManagement() {
     phone: '',
   });
 
+  // Email validation function
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Fetch users from Supabase
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch profiles and roles separately since they don't have direct relation
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -83,14 +103,12 @@ export default function UserManagement() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Merge profiles with roles
       const usersWithRoles = profilesData.map(profile => {
         const userRole = rolesData.find(r => r.user_id === profile.user_id);
         return {
@@ -104,16 +122,16 @@ export default function UserManagement() {
     } catch (err: any) {
       console.error('Error fetching users:', err);
       setError(err.message);
+      toast.error('Failed to fetch users');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter users based on search and role
+  // Filter users
   useEffect(() => {
     let filtered = users;
 
-    // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(user =>
         user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -121,7 +139,6 @@ export default function UserManagement() {
       );
     }
 
-    // Apply role filter
     if (roleFilter !== 'all') {
       filtered = filtered.filter(user => user.role === roleFilter);
     }
@@ -129,15 +146,34 @@ export default function UserManagement() {
     setFilteredUsers(filtered);
   }, [searchQuery, roleFilter, users]);
 
-  // Initial load
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  // Add new user - Using Supabase signup flow
+  // Add new user
   const handleAddUser = async () => {
-    if (!formData.full_name || !formData.email || !formData.password) {
-      setError('Please fill in all required fields');
+    // Validation
+    if (!formData.full_name.trim()) {
+      setError('Full name is required');
+      toast.error('Full name is required');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      toast.error('Email is required');
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setError('Please enter a valid email address');
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!formData.password || formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
@@ -145,33 +181,54 @@ export default function UserManagement() {
       setSubmitting(true);
       setError(null);
 
-      // Option 1: Direct signup (user must verify email)
+      console.log('Creating user with email:', formData.email);
+
+      // PENTING: Simpan session admin saat ini
+      const { data: { session: currentAdminSession } } = await supabase.auth.getSession();
+
+      // Create user via Supabase Auth
       const { data: signupData, error: signupError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         options: {
           data: {
-            full_name: formData.full_name,
+            full_name: formData.full_name.trim(),
             department: formData.department || null,
             phone: formData.phone || null,
             role: formData.role
-          }
+          },
+          emailRedirectTo: undefined,
         }
       });
 
-      if (signupError) throw signupError;
+      if (signupError) {
+        console.error('Signup error:', signupError);
+        throw signupError;
+      }
+
+      console.log('User created:', signupData);
+
+      // PENTING: Restore session admin
+      if (currentAdminSession) {
+        await supabase.auth.setSession({
+          access_token: currentAdminSession.access_token,
+          refresh_token: currentAdminSession.refresh_token
+        });
+      }
 
       if (signupData.user) {
         // Wait for trigger to create profile
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Update role in user_roles table
+        // Update role
         const { error: roleError } = await supabase
           .from('user_roles')
           .update({ role: formData.role })
           .eq('user_id', signupData.user.id);
 
-        if (roleError) console.error('Role update error:', roleError);
+        if (roleError) {
+          console.error('Role update error:', roleError);
+        }
 
         // Update profile with additional info
         const { error: profileError } = await supabase
@@ -182,9 +239,12 @@ export default function UserManagement() {
           })
           .eq('user_id', signupData.user.id);
 
-        if (profileError) console.error('Profile update error:', profileError);
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+        }
       }
 
+      // Reset form
       setFormData({
         full_name: '',
         email: '',
@@ -193,16 +253,32 @@ export default function UserManagement() {
         department: '',
         phone: ''
       });
+      
       setIsAddDialogOpen(false);
       
-      // Show success with email verification notice
-      alert(`User created! A verification email has been sent to ${formData.email}. The user must verify their email before they can log in.`);
+      toast.success('User created successfully!', {
+        description: `User ${formData.full_name} has been added to the system.`
+      });
       
       await fetchUsers();
       setError(null);
     } catch (err: any) {
       console.error('Error adding user:', err);
-      setError(err.message || 'Failed to add user. Note: Email verification is required.');
+      
+      let errorMessage = 'Failed to add user';
+      
+      if (err.message.includes('User already registered')) {
+        errorMessage = 'This email is already registered';
+      } else if (err.message.includes('invalid')) {
+        errorMessage = 'Invalid email format';
+      } else if (err.message.includes('Password')) {
+        errorMessage = 'Password must be at least 6 characters';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -210,8 +286,9 @@ export default function UserManagement() {
 
   // Edit user
   const handleEditUser = async () => {
-    if (!editingUser || !formData.full_name || !formData.email) {
+    if (!editingUser || !formData.full_name) {
       setError('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -219,12 +296,11 @@ export default function UserManagement() {
       setSubmitting(true);
       setError(null);
 
-      // Update profile
+      // Update profile (tanpa email karena email tidak bisa diubah dari admin panel)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name,
-          email: formData.email,
+          full_name: formData.full_name.trim(),
           department: formData.department || null,
           phone: formData.phone || null
         })
@@ -240,44 +316,41 @@ export default function UserManagement() {
 
       if (roleError) throw roleError;
 
-      // Update auth email if changed
-      if (formData.email !== editingUser.email) {
-        // Without service role key, we can't update auth email directly
-        // User needs to update it themselves through their profile settings
-        console.warn('Email update requires service role key or user self-update');
-      }
-
       setIsEditDialogOpen(false);
       setEditingUser(null);
+      
+      toast.success('User updated successfully');
+      
       await fetchUsers();
       setError(null);
     } catch (err: any) {
       console.error('Error updating user:', err);
       setError(err.message || 'Failed to update user');
+      toast.error(err.message || 'Failed to update user');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Delete user (soft delete)
+  // Delete user
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to deactivate this user?')) return;
 
     try {
       setError(null);
-
-      // Soft delete by setting is_active to false
       const { error: deactivateError } = await supabase
         .from('profiles')
         .update({ is_active: false })
         .eq('user_id', userId);
 
       if (deactivateError) throw deactivateError;
-
+      
+      toast.success('User deactivated successfully');
       await fetchUsers();
     } catch (err: any) {
       console.error('Error deleting user:', err);
       setError(err.message || 'Failed to delete user');
+      toast.error(err.message || 'Failed to delete user');
     }
   };
 
@@ -285,17 +358,19 @@ export default function UserManagement() {
   const handleResetPassword = async (user: UserWithRole) => {
     try {
       setError(null);
-
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) throw error;
-
-      alert(`Password reset link sent to ${user.email}`);
+      
+      toast.success('Password reset link sent', {
+        description: `Email sent to ${user.email}`
+      });
     } catch (err: any) {
       console.error('Error sending reset email:', err);
       setError(err.message || 'Failed to send reset link');
+      toast.error(err.message || 'Failed to send reset link');
     }
   };
 
@@ -313,7 +388,7 @@ export default function UserManagement() {
     setIsEditDialogOpen(true);
   };
 
-  // FIXED: Calculate stats for ALL roles
+  // Calculate stats
   const stats = {
     total: users.length,
     admins: users.filter(u => u.role === 'admin').length,
@@ -347,13 +422,15 @@ export default function UserManagement() {
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
+                <Label htmlFor="full_name">
+                  Full Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
@@ -362,17 +439,24 @@ export default function UserManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">
+                  Email <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="user@dfir.com"
+                  placeholder="user@example.com"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Use a valid email address (e.g., user@gmail.com)
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password">
+                  Password <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="password"
                   type="password"
@@ -382,7 +466,9 @@ export default function UserManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role *</Label>
+                <Label htmlFor="role">
+                  Role <span className="text-destructive">*</span>
+                </Label>
                 <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -398,12 +484,18 @@ export default function UserManagement() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  placeholder="e.g., Security, IT, SOC"
-                />
+                <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
@@ -428,9 +520,8 @@ export default function UserManagement() {
         </Dialog>
       </div>
 
-      {/* FIXED: Stats Cards - Menampilkan SEMUA 5 role */}
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        {/* Total Users */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -442,7 +533,6 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        {/* Admins */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Admins</CardTitle>
@@ -454,7 +544,6 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        {/* Managers */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Managers</CardTitle>
@@ -466,7 +555,6 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        {/* Investigators */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Investigators</CardTitle>
@@ -478,7 +566,6 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        {/* First Responders */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Responders</CardTitle>
@@ -490,7 +577,6 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        {/* Reporters */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Reporters</CardTitle>
@@ -618,30 +704,44 @@ export default function UserManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                For security reasons, email cannot be changed by admin. User can update their own email from account settings.
+              </AlertDescription>
+            </Alert>
+            
             <div className="space-y-2">
-              <Label htmlFor="edit-full_name">Full Name *</Label>
+              <Label htmlFor="edit-full_name">
+                Full Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="edit-full_name"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email *</Label>
+              <Label htmlFor="edit-email-display">Email (Read-only)</Label>
               <Input
-                id="edit-email"
+                id="edit-email-display"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                disabled
+                className="bg-muted cursor-not-allowed"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Role *</Label>
+              <Label htmlFor="edit-role">
+                Role <span className="text-destructive">*</span>
+              </Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -655,20 +755,30 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit-department">Department</Label>
-              <Input
-                id="edit-department"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              />
+              <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit-phone">Phone</Label>
               <Input
                 id="edit-phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="e.g., +62812345678"
               />
             </div>
           </div>

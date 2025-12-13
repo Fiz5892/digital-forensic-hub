@@ -12,7 +12,6 @@ import Dashboard from "@/pages/Dashboard";
 import IncidentList from "@/pages/IncidentList";
 import IncidentDetail from "@/pages/IncidentDetail";
 import ReportIncident from "@/pages/ReportIncident";
-import ForensicTools from "@/pages/ForensicTools";
 import Analytics from "@/pages/Analytics";
 import UserManagement from "@/pages/UserManagement";
 import Settings from "@/pages/Settings";
@@ -38,7 +37,6 @@ const App = () => (
                   <Route path="/report" element={<ReportIncident />} />
                   <Route path="/incidents" element={<IncidentList />} />
                   <Route path="/incidents/:id" element={<IncidentDetail />} />
-                  <Route path="/tools" element={<ForensicTools />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/users" element={<UserManagement />} />
                   <Route path="/audit-logs" element={<AuditLogs />} />

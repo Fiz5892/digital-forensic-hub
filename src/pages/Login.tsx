@@ -5,10 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Eye, EyeOff, Lock, Mail, AlertCircle, User, CheckCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Shield, Eye, EyeOff, Lock, Mail, AlertCircle, User, CheckCircle, Building2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { logAuthEvent } from '@/lib/auditLogger';
+
+// Department options
+const DEPARTMENTS = [
+  'Security Operations Center (SOC)',
+  'IT Security',
+  'Information Technology',
+  'Network Operations',
+  'Cybersecurity',
+  'Digital Forensics',
+  'Incident Response',
+  'Compliance & Audit',
+  'Risk Management',
+  'Other'
+];
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -20,6 +35,8 @@ const signupSchema = z.object({
   email: z.string().email('Email tidak valid'),
   password: z.string().min(6, 'Password minimal 6 karakter'),
   confirmPassword: z.string(),
+  department: z.string().optional(),
+  phone: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Password tidak cocok",
   path: ["confirmPassword"],
@@ -38,6 +55,8 @@ export default function Login() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupDepartment, setSignupDepartment] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +116,9 @@ export default function Login() {
       fullName: signupFullName,
       email: signupEmail, 
       password: signupPassword,
-      confirmPassword: signupConfirmPassword
+      confirmPassword: signupConfirmPassword,
+      department: signupDepartment,
+      phone: signupPhone
     });
     
     if (!validation.success) {
@@ -108,18 +129,35 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const { error } = await signup(signupEmail, signupPassword, signupFullName);
+      // Pass additional data to signup function
+      const { error } = await signup(
+        signupEmail, 
+        signupPassword, 
+        signupFullName,
+        signupDepartment || signupPhone ? {
+          department: signupDepartment || null,
+          phone: signupPhone || null
+        } : undefined
+      );
+      
       if (error) {
         setError(error);
       } else {
         setSuccess('Akun berhasil dibuat! Silakan login.');
         setActiveTab('login');
         setLoginEmail(signupEmail);
+        
         // Clear signup form
         setSignupFullName('');
         setSignupEmail('');
         setSignupPassword('');
         setSignupConfirmPassword('');
+        setSignupDepartment('');
+        setSignupPhone('');
+        
+        toast.success('Pendaftaran berhasil!', {
+          description: 'Silakan login dengan akun baru Anda'
+        });
       }
     } catch (err) {
       setError('Terjadi kesalahan. Silakan coba lagi.');
@@ -190,8 +228,8 @@ export default function Login() {
       </div>
 
       {/* Right Panel - Auth Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex-1 flex items-center justify-center p-8 bg-background overflow-y-auto">
+        <div className="w-full max-w-md space-y-8 py-8">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
             <Shield className="h-10 w-10 text-primary" />
@@ -293,8 +331,11 @@ export default function Login() {
                   </div>
                 )}
 
+                {/* Full Name - Required */}
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nama Lengkap</Label>
+                  <Label htmlFor="signup-name">
+                    Nama Lengkap <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -310,8 +351,11 @@ export default function Login() {
                   </div>
                 </div>
 
+                {/* Email - Required */}
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">
+                    Email <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -327,8 +371,48 @@ export default function Login() {
                   </div>
                 </div>
 
+                {/* Department - Optional */}
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-department">Department</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                    <Select value={signupDepartment} onValueChange={setSignupDepartment}>
+                      <SelectTrigger className="pl-10">
+                        <SelectValue placeholder="Pilih department (opsional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DEPARTMENTS.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Phone - Optional */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="+62 812-3456-7890 (opsional)"
+                      value={signupPhone}
+                      onChange={(e) => setSignupPhone(e.target.value)}
+                      className="pl-10"
+                      autoComplete="tel"
+                    />
+                  </div>
+                </div>
+
+                {/* Password - Required */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">
+                    Password <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -351,8 +435,11 @@ export default function Login() {
                   </div>
                 </div>
 
+                {/* Confirm Password - Required */}
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm">Konfirmasi Password</Label>
+                  <Label htmlFor="signup-confirm">
+                    Konfirmasi Password <span className="text-destructive">*</span>
+                  </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input

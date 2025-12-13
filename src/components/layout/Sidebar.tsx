@@ -20,7 +20,6 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['reporter', 'first_responder', 'investigator', 'manager', 'admin'] },
   { name: 'Report Incident', href: '/report', icon: FileText, roles: ['reporter', 'first_responder', 'investigator', 'manager', 'admin'] },
   { name: 'Incidents', href: '/incidents', icon: Folder, roles: ['first_responder', 'investigator', 'manager', 'admin'] },
-  { name: 'Forensic Tools', href: '/tools', icon: Wrench, roles: ['investigator', 'manager', 'admin'] },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['manager', 'admin'] },
   { name: 'Audit Logs', href: '/audit-logs', icon: ScrollText, roles: ['manager', 'admin'] },
   { name: 'Users', href: '/users', icon: Users, roles: ['admin'] },

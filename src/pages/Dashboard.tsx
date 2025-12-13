@@ -11,10 +11,7 @@ import {
   CheckCircle, 
   Plus,
   ArrowRight,
-  Shield,
-  Activity,
-  Users,
-  TrendingUp
+  Shield
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -132,7 +129,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         {/* Recent Incidents */}
         <div className="lg:col-span-2 glass-card rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
@@ -170,90 +167,33 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions / My Cases */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
+        {/* My Assigned Cases */}
+        {user?.role === 'investigator' && (
           <div className="glass-card rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-            <div className="space-y-2">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start gap-2"
-                onClick={() => navigate('/report')}
-              >
-                <Plus className="h-4 w-4" />
-                Report New Incident
-              </Button>
-              {user?.role !== 'reporter' && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start gap-2"
-                    onClick={() => navigate('/incidents')}
-                  >
-                    <FileText className="h-4 w-4" />
-                    View All Incidents
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start gap-2"
-                    onClick={() => navigate('/tools')}
-                  >
-                    <Activity className="h-4 w-4" />
-                    Forensic Tools
-                  </Button>
-                </>
+            <h2 className="text-lg font-semibold mb-4">My Cases</h2>
+            <div className="space-y-3">
+              {myIncidents.filter(i => i.status !== 'closed').slice(0, 5).map((incident) => (
+                <div 
+                  key={incident.id}
+                  onClick={() => navigate(`/incidents/${incident.id}`)}
+                  className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-mono text-primary">{incident.id}</span>
+                    <StatusBadge status={incident.status} />
+                  </div>
+                  <p className="text-sm font-medium truncate">{incident.title}</p>
+                </div>
+              ))}
+              {myIncidents.filter(i => i.status !== 'closed').length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No active cases assigned</p>
+                </div>
               )}
             </div>
           </div>
-
-          {/* My Assigned Cases */}
-          {user?.role === 'investigator' && (
-            <div className="glass-card rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">My Cases</h2>
-              <div className="space-y-3">
-                {myIncidents.filter(i => i.status !== 'closed').slice(0, 3).map((incident) => (
-                  <div 
-                    key={incident.id}
-                    onClick={() => navigate(`/incidents/${incident.id}`)}
-                    className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-mono text-primary">{incident.id}</span>
-                      <StatusBadge status={incident.status} />
-                    </div>
-                    <p className="text-sm font-medium truncate">{incident.title}</p>
-                  </div>
-                ))}
-                {myIncidents.filter(i => i.status !== 'closed').length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No active cases assigned</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* System Status */}
-          <div className="glass-card rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">System Status</h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <span className="flex items-center gap-2 text-sm text-status-low">
-                  <span className="w-2 h-2 rounded-full bg-status-low animate-pulse" />
-                  Operational
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Active Users</span>
-                <span className="text-sm font-medium">5</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Storage Used</span>
-                <span className="text-sm font-medium">45 GB / 100 GB</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

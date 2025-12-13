@@ -66,13 +66,7 @@ export default function Analytics() {
     };
   });
 
-  // Response time metrics (simulated)
-  const responseMetrics = [
-    { name: 'MTTD', value: 45, unit: 'min', label: 'Mean Time to Detect' },
-    { name: 'MTTR', value: 2.5, unit: 'hrs', label: 'Mean Time to Respond' },
-    { name: 'MTTC', value: 8, unit: 'hrs', label: 'Mean Time to Contain' },
-    { name: 'MTTRes', value: 3.2, unit: 'days', label: 'Mean Time to Resolve' },
-  ];
+
 
   return (
     <div className="space-y-6">
@@ -260,24 +254,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Response Metrics */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground">Response Time Metrics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {responseMetrics.map((metric) => (
-              <div key={metric.name} className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-3xl font-bold text-primary">{metric.value}</p>
-                <p className="text-sm text-muted-foreground">{metric.unit}</p>
-                <p className="text-xs text-muted-foreground mt-1">{metric.label}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
