@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,12 +23,12 @@ import {
   AlertTriangle,
   Globe,
   Server,
-  Shield,
   Loader2
 } from 'lucide-react';
 import { incidentTypes, priorityOptions } from '@/lib/mockData';
 import { Incident, IncidentPriority, IncidentType } from '@/lib/types';
 import { toast } from 'sonner';
+import { logAudit } from '@/lib/auditLogger';
 
 const steps = [
   { id: 1, title: 'Basic Info', icon: AlertTriangle },
@@ -40,6 +41,7 @@ export default function ReportIncident() {
   const navigate = useNavigate();
   const { addIncident, getNextIncidentId } = useData();
   const { user } = useAuth();
+  const { notifyIncidentCreated } = useNotifications();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -115,10 +117,9 @@ export default function ReportIncident() {
         },
         timeline: [
           {
-            id: '1',
             timestamp: new Date().toISOString(),
-            event: 'Incident reported via DFIR system',
-            type: 'report',
+            title: 'Incident Reported',
+            description: 'Incident reported via DFIR system',
             user: user.name,
           }
         ],
@@ -127,15 +128,57 @@ export default function ReportIncident() {
         regulatory_requirements: [],
       };
 
+      // Add incident to database
       await addIncident(newIncident);
       
+      // Log audit trail for incident creation
+      await logAudit({
+        action: 'create',
+        entity_type: 'incident',
+        entity_id: incidentId,
+        details: {
+          title: newIncident.title,
+          type: newIncident.type,
+          priority: newIncident.priority,
+          status: newIncident.status,
+          target_url: formData.target_url,
+          reporter: user.email,
+          impact_scores: {
+            confidentiality: formData.confidentiality,
+            integrity: formData.integrity,
+            availability: formData.availability,
+          },
+        },
+      });
+
+      // Send notification ONLY if there's an assigned_to (dalam kasus real)
+      // Untuk incident baru, biasanya belum ada assignee
+      // Notifikasi akan dikirim ketika admin/manager assign incident ke investigator
+      
       toast.success('Incident reported successfully', {
-        description: `Incident ${incidentId} has been created and saved to database`
+        description: `Incident ${incidentId} has been created and logged to audit trail`
       });
       
       navigate(`/incidents/${incidentId}`);
     } catch (error) {
       console.error('Error submitting incident:', error);
+      
+      // Log failed attempt
+      try {
+        await logAudit({
+          action: 'create',
+          entity_type: 'incident',
+          details: {
+            error: 'Failed to create incident',
+            title: formData.title,
+            type: formData.type,
+            attempted_by: user.email,
+          },
+        });
+      } catch (auditError) {
+        console.error('Failed to log audit trail:', auditError);
+      }
+
       toast.error('Failed to submit incident', {
         description: 'Please try again or contact support'
       });
@@ -443,7 +486,7 @@ export default function ReportIncident() {
                 </div>
                 <div className="p-4 rounded-lg bg-muted/30">
                   <p className="text-xs text-muted-foreground mb-1">Target URL</p>
-                  <p className="font-mono text-sm">{formData.target_url}</p>
+                  <p className="font-mono text-sm break-all">{formData.target_url}</p>
                 </div>
               </div>
 
@@ -474,12 +517,12 @@ export default function ReportIncident() {
 
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
               <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-primary mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-primary mt-0.5" />
                 <div>
                   <p className="font-medium text-primary">Ready to Submit</p>
                   <p className="text-sm text-muted-foreground">
-                    Once submitted, the incident will be saved to the database and assigned an ID. 
-                    You'll receive notifications on status updates.
+                    Once submitted, the incident will be saved to the database and logged in the audit trail. 
+                    Notifications will be sent when the incident is assigned to an investigator.
                   </p>
                 </div>
               </div>
