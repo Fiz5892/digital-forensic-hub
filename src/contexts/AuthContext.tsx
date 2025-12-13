@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/lib/types';
+import { logAuthEvent } from '@/lib/auditLogger';
 
 interface AppUser {
   id: string;
@@ -101,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -114,6 +115,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: 'Email belum dikonfirmasi. Periksa inbox Anda.' };
         }
         return { error: error.message };
+      }
+
+      // LOG AUDIT: Login berhasil
+      if (data.user) {
+        await logAuthEvent('login', email, data.user.id);
       }
 
       return { error: null };
@@ -154,9 +160,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
+    try {
+      // Dapatkan email user sebelum logout untuk audit log
+      const userEmail = user?.email || 'unknown';
+      const userId = user?.id;
+
+      // LOG AUDIT: Logout
+      if (userId) {
+        await logAuthEvent('logout', userEmail, userId);
+      }
+
+      // Lakukan logout
+      await supabase.auth.signOut();
+      
+      setUser(null);
+      setSession(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const hasRole = (roles: UserRole[]): boolean => {

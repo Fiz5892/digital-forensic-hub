@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Incident, Evidence } from '@/lib/types';
+import { Incident, Evidence, AuditLog, CustodyTransfer } from '@/lib/types';
 
 interface DataContextType {
   incidents: Incident[];
   evidence: Evidence[];
+  auditLogs: AuditLog[];
   isLoading: boolean;
   addIncident: (incident: Incident) => Promise<void>;
   updateIncident: (id: string, updates: Partial<Incident>) => Promise<void>;
@@ -16,6 +17,7 @@ interface DataContextType {
   getNextEvidenceId: (incidentId: string) => string;
   refreshIncidents: () => Promise<void>;
   refreshEvidence: () => Promise<void>;
+  refreshAuditLogs: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: { children: ReactNode }) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch incidents from Supabase
@@ -81,22 +84,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const transformedEvidence: Evidence[] = data.map(item => ({
           id: item.id,
           incident_id: item.incident_id,
-          type: item.type,
-          description: item.description,
-          file_name: item.file_name,
-          file_size: item.file_size,
+          filename: item.filename,
           file_type: item.file_type,
+          file_size: item.file_size || 0,
           hash_md5: item.hash_md5,
           hash_sha256: item.hash_sha256,
           collected_by: {
-            id: item.collected_by_id,
-            name: item.collected_by_name,
+            id: item.collected_by_id || '',
+            name: item.collected_by_name || '',
           },
           collected_at: item.collected_at,
-          chain_of_custody: item.chain_of_custody || [],
+          current_custodian: {
+            id: item.current_custodian_id || '',
+            name: item.current_custodian_name || '',
+          },
           storage_location: item.storage_location,
+          analysis_status: item.analysis_status,
+          integrity_status: item.integrity_status,
+          description: item.description,
           tags: item.tags || [],
           analysis_results: item.analysis_results,
+          custody_chain: (item.chain_of_custody as CustodyTransfer[]) || [],
         }));
 
         setEvidence(transformedEvidence);
@@ -106,11 +114,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Fetch audit logs from Supabase
+  const fetchAuditLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setAuditLogs(data);
+      }
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await Promise.all([fetchIncidents(), fetchEvidence()]);
+      await Promise.all([fetchIncidents(), fetchEvidence(), fetchAuditLogs()]);
       setIsLoading(false);
     };
 
@@ -119,7 +145,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Set up realtime subscriptions for live updates
     const incidentsSubscription = supabase
       .channel('incidents_changes')
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'incidents' },
         () => fetchIncidents()
       )
@@ -133,9 +159,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       )
       .subscribe();
 
+    const auditLogsSubscription = supabase
+      .channel('audit_logs_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'audit_logs' },
+        () => fetchAuditLogs()
+      )
+      .subscribe();
+
     return () => {
       incidentsSubscription.unsubscribe();
       evidenceSubscription.unsubscribe();
+      auditLogsSubscription.unsubscribe();
     };
   }, []);
 
@@ -307,10 +342,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await fetchEvidence();
   };
 
+  const refreshAuditLogs = async () => {
+    await fetchAuditLogs();
+  };
+
   return (
     <DataContext.Provider value={{
       incidents,
       evidence,
+      auditLogs,
       isLoading,
       addIncident,
       updateIncident,
@@ -322,6 +362,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       getNextEvidenceId,
       refreshIncidents,
       refreshEvidence,
+      refreshAuditLogs,
     }}>
       {children}
     </DataContext.Provider>

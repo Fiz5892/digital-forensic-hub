@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Search, 
   Download, 
@@ -19,9 +19,39 @@ import {
   Plus,
   RefreshCw
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+// Date formatting helper
+const formatDate = (date: Date) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${month} ${day}, ${hours}:${minutes}:${seconds}`;
+};
+
+const formatDateFull = (date: Date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+const formatDateShort = (date: Date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Supabase Client Setup
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cgvdwgdqawkvjehuqlao.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndmR3Z2RxYXdrdmplaHVxbGFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDA2NDMsImV4cCI6MjA4MTExNjY0M30.Usu3U5pM_RBCS9-xaQ9cxsPpnPP9Zhu2A0dwc7SE5Vw';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface AuditLog {
   id: string;
@@ -53,126 +83,31 @@ const actionColors: Record<string, string> = {
   logout: 'bg-muted text-muted-foreground border-muted',
 };
 
-// Mock audit logs for demo
-const mockAuditLogs: AuditLog[] = [
-  {
-    id: '1',
-    user_id: '1',
-    user_email: 'admin@dfir.com',
-    action: 'login',
-    entity_type: 'session',
-    entity_id: null,
-    details: { method: 'email' },
-    ip_address: '192.168.1.100',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    user_id: '3',
-    user_email: 'investigator@dfir.com',
-    action: 'create',
-    entity_type: 'incident',
-    entity_id: 'INC-2024-003',
-    details: { title: 'New SQL Injection Detected' },
-    ip_address: '192.168.1.105',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: '3',
-    user_id: '3',
-    user_email: 'investigator@dfir.com',
-    action: 'update',
-    entity_type: 'evidence',
-    entity_id: 'EVD-2024-001-01',
-    details: { field: 'status', old: 'pending', new: 'analyzing' },
-    ip_address: '192.168.1.105',
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    id: '4',
-    user_id: '4',
-    user_email: 'manager@dfir.com',
-    action: 'view',
-    entity_type: 'report',
-    entity_id: 'RPT-2024-001',
-    details: { format: 'pdf' },
-    ip_address: '192.168.1.110',
-    created_at: new Date(Date.now() - 10800000).toISOString(),
-  },
-  {
-    id: '5',
-    user_id: '2',
-    user_email: 'responder@dfir.com',
-    action: 'update',
-    entity_type: 'incident',
-    entity_id: 'INC-2024-001',
-    details: { field: 'status', old: 'new', new: 'investigation' },
-    ip_address: '192.168.1.102',
-    created_at: new Date(Date.now() - 14400000).toISOString(),
-  },
-  {
-    id: '6',
-    user_id: '5',
-    user_email: 'reporter@dfir.com',
-    action: 'create',
-    entity_type: 'incident',
-    entity_id: 'INC-2024-002',
-    details: { title: 'Website Defacement Detected' },
-    ip_address: '192.168.1.120',
-    created_at: new Date(Date.now() - 18000000).toISOString(),
-  },
-  {
-    id: '7',
-    user_id: '1',
-    user_email: 'admin@dfir.com',
-    action: 'delete',
-    entity_type: 'user',
-    entity_id: 'USR-007',
-    details: { reason: 'Account deactivated' },
-    ip_address: '192.168.1.100',
-    created_at: new Date(Date.now() - 21600000).toISOString(),
-  },
-  {
-    id: '8',
-    user_id: '3',
-    user_email: 'investigator@dfir.com',
-    action: 'create',
-    entity_type: 'evidence',
-    entity_id: 'EVD-2024-002-01',
-    details: { filename: 'access.log', size: '2.5MB' },
-    ip_address: '192.168.1.105',
-    created_at: new Date(Date.now() - 25200000).toISOString(),
-  },
-];
-
 export default function AuditLogs() {
-  const [logs, setLogs] = useState<AuditLog[]>(mockAuditLogs);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<AuditLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // Try to fetch from Supabase first
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       
-      if (error) {
-        console.log('Using mock data:', error.message);
-        setLogs(mockAuditLogs);
-      } else if (data && data.length > 0) {
-        setLogs(data as AuditLog[]);
-      } else {
-        setLogs(mockAuditLogs);
-      }
-    } catch (err) {
-      console.log('Using mock data');
-      setLogs(mockAuditLogs);
+      if (fetchError) throw fetchError;
+      
+      setLogs(data || []);
+    } catch (err: any) {
+      console.error('Error fetching audit logs:', err);
+      setError(err.message || 'Failed to fetch audit logs');
     } finally {
       setIsLoading(false);
     }
@@ -180,31 +115,69 @@ export default function AuditLogs() {
 
   useEffect(() => {
     fetchLogs();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('audit_logs_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'audit_logs'
+        },
+        () => {
+          fetchLogs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.entity_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesAction = actionFilter === 'all' || log.action === actionFilter;
-    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter;
-    
-    return matchesSearch && matchesAction && matchesEntity;
-  });
+  // Filter logs
+  useEffect(() => {
+    let filtered = logs;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(log => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          log.user_email?.toLowerCase().includes(searchLower) ||
+          log.entity_id?.toLowerCase().includes(searchLower) ||
+          log.action.toLowerCase().includes(searchLower) ||
+          log.entity_type.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Action filter
+    if (actionFilter !== 'all') {
+      filtered = filtered.filter(log => log.action === actionFilter);
+    }
+
+    // Entity filter
+    if (entityFilter !== 'all') {
+      filtered = filtered.filter(log => log.entity_type === entityFilter);
+    }
+
+    setFilteredLogs(filtered);
+  }, [logs, searchTerm, actionFilter, entityFilter]);
 
   const exportLogs = () => {
     const csv = [
       ['Timestamp', 'User', 'Action', 'Entity Type', 'Entity ID', 'IP Address', 'Details'].join(','),
       ...filteredLogs.map(log => [
-        format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss'),
+        formatDateFull(new Date(log.created_at)),
         log.user_email || 'System',
         log.action,
         log.entity_type,
         log.entity_id || '-',
         log.ip_address || '-',
-        JSON.stringify(log.details || {})
+        JSON.stringify(log.details || {}).replace(/,/g, ';')
       ].join(','))
     ].join('\n');
 
@@ -212,16 +185,23 @@ export default function AuditLogs() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `audit-logs-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `audit-logs-${formatDateShort(new Date())}.csv`;
     a.click();
-    toast.success('Audit logs exported successfully');
+    window.URL.revokeObjectURL(url);
   };
 
-  const uniqueActions = [...new Set(logs.map(l => l.action))];
-  const uniqueEntities = [...new Set(logs.map(l => l.entity_type))];
+  const uniqueActions = [...new Set(logs.map(l => l.action))].sort();
+  const uniqueEntities = [...new Set(logs.map(l => l.entity_type))].sort();
+
+  const stats = {
+    total: logs.length,
+    creates: logs.filter(l => l.action === 'create').length,
+    updates: logs.filter(l => l.action === 'update').length,
+    deletes: logs.filter(l => l.action === 'delete').length,
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -233,12 +213,21 @@ export default function AuditLogs() {
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={exportLogs} className="gap-2">
+          <Button onClick={exportLogs} disabled={filteredLogs.length === 0} className="gap-2">
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <Card className="bg-destructive/10 border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -249,7 +238,7 @@ export default function AuditLogs() {
                 <FileText className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{logs.length}</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
                 <p className="text-sm text-muted-foreground">Total Events</p>
               </div>
             </div>
@@ -263,9 +252,7 @@ export default function AuditLogs() {
                 <Plus className="h-6 w-6 text-status-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {logs.filter(l => l.action === 'create').length}
-                </p>
+                <p className="text-2xl font-bold text-foreground">{stats.creates}</p>
                 <p className="text-sm text-muted-foreground">Creates</p>
               </div>
             </div>
@@ -279,9 +266,7 @@ export default function AuditLogs() {
                 <Edit className="h-6 w-6 text-status-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {logs.filter(l => l.action === 'update').length}
-                </p>
+                <p className="text-2xl font-bold text-foreground">{stats.updates}</p>
                 <p className="text-sm text-muted-foreground">Updates</p>
               </div>
             </div>
@@ -295,9 +280,7 @@ export default function AuditLogs() {
                 <Trash2 className="h-6 w-6 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {logs.filter(l => l.action === 'delete').length}
-                </p>
+                <p className="text-2xl font-bold text-foreground">{stats.deletes}</p>
                 <p className="text-sm text-muted-foreground">Deletes</p>
               </div>
             </div>
@@ -327,7 +310,9 @@ export default function AuditLogs() {
               <SelectContent>
                 <SelectItem value="all">All Actions</SelectItem>
                 {uniqueActions.map(action => (
-                  <SelectItem key={action} value={action}>{action}</SelectItem>
+                  <SelectItem key={action} value={action} className="capitalize">
+                    {action}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -339,7 +324,9 @@ export default function AuditLogs() {
               <SelectContent>
                 <SelectItem value="all">All Entities</SelectItem>
                 {uniqueEntities.map(entity => (
-                  <SelectItem key={entity} value={entity}>{entity}</SelectItem>
+                  <SelectItem key={entity} value={entity} className="capitalize">
+                    {entity}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -352,75 +339,85 @@ export default function AuditLogs() {
         <CardHeader>
           <CardTitle className="text-foreground flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Activity Log
+            Activity Log ({filteredLogs.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead>IP Address</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {format(new Date(log.created_at), 'MMM dd, HH:mm:ss')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-foreground">{log.user_email || 'System'}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={`gap-1 ${actionColors[log.action] || 'bg-muted'}`}
-                    >
-                      {actionIcons[log.action]}
-                      {log.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="text-foreground capitalize">{log.entity_type}</p>
-                      {log.entity_id && (
-                        <p className="text-xs text-muted-foreground font-mono">{log.entity_id}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {log.details && (
-                      <code className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground">
-                        {JSON.stringify(log.details).slice(0, 50)}
-                        {JSON.stringify(log.details).length > 50 ? '...' : ''}
-                      </code>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-sm">
-                    {log.ip_address || '-'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {filteredLogs.length === 0 && (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-4" />
+              <p className="text-muted-foreground">Loading audit logs...</p>
+            </div>
+          ) : filteredLogs.length === 0 ? (
             <div className="text-center py-12">
               <Shield className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No audit logs found</p>
+              <p className="text-muted-foreground">
+                {logs.length === 0 ? 'No audit logs found' : 'No logs match your filters'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Timestamp</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">User</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Entity</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Details</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLogs.map((log) => (
+                    <tr key={log.id} className="border-b border-border hover:bg-muted/50">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                          <Clock className="h-4 w-4" />
+                          {formatDate(new Date(log.created_at))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-foreground text-sm truncate">
+                            {log.user_email || 'System'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge 
+                          variant="outline" 
+                          className={`gap-1 capitalize ${actionColors[log.action] || 'bg-muted'}`}
+                        >
+                          {actionIcons[log.action]}
+                          {log.action}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="space-y-1">
+                          <p className="text-foreground capitalize text-sm">{log.entity_type}</p>
+                          {log.entity_id && (
+                            <p className="text-xs text-muted-foreground font-mono">{log.entity_id}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {log.details && (
+                          <code className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground block max-w-xs truncate">
+                            {JSON.stringify(log.details)}
+                          </code>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground font-mono text-sm">
+                        {log.ip_address || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>

@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Eye, EyeOff, Lock, Mail, AlertCircle, User, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { logAuthEvent } from '@/lib/auditLogger';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -71,6 +72,9 @@ export default function Login() {
       if (error) {
         setError(error);
       } else {
+        // LOG AUDIT: Login berhasil
+        await logAuthEvent('login', loginEmail);
+        
         toast.success('Login berhasil', {
           description: 'Selamat datang di DFIR-Manager'
         });

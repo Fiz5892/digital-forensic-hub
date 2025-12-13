@@ -86,6 +86,149 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence: {
+        Row: {
+          analysis_results: Json | null
+          analysis_status: Database["public"]["Enums"]["analysis_status"]
+          chain_of_custody: Json | null
+          collected_at: string
+          collected_by_id: string | null
+          collected_by_name: string | null
+          current_custodian_id: string | null
+          current_custodian_name: string | null
+          description: string | null
+          file_size: number | null
+          file_type: string | null
+          filename: string
+          hash_md5: string | null
+          hash_sha256: string | null
+          id: string
+          incident_id: string
+          integrity_status: Database["public"]["Enums"]["integrity_status"]
+          storage_location: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          analysis_results?: Json | null
+          analysis_status?: Database["public"]["Enums"]["analysis_status"]
+          chain_of_custody?: Json | null
+          collected_at?: string
+          collected_by_id?: string | null
+          collected_by_name?: string | null
+          current_custodian_id?: string | null
+          current_custodian_name?: string | null
+          description?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          filename: string
+          hash_md5?: string | null
+          hash_sha256?: string | null
+          id?: string
+          incident_id: string
+          integrity_status?: Database["public"]["Enums"]["integrity_status"]
+          storage_location?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          analysis_results?: Json | null
+          analysis_status?: Database["public"]["Enums"]["analysis_status"]
+          chain_of_custody?: Json | null
+          collected_at?: string
+          collected_by_id?: string | null
+          collected_by_name?: string | null
+          current_custodian_id?: string | null
+          current_custodian_name?: string | null
+          description?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          filename?: string
+          hash_md5?: string | null
+          hash_sha256?: string | null
+          id?: string
+          incident_id?: string
+          integrity_status?: Database["public"]["Enums"]["integrity_status"]
+          storage_location?: string | null
+          tags?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      incidents: {
+        Row: {
+          assigned_to_id: string | null
+          assigned_to_name: string | null
+          closed_at: string | null
+          created_at: string
+          description: string | null
+          evidence_ids: string[] | null
+          id: string
+          impact_assessment: Json | null
+          notes: Json | null
+          priority: Database["public"]["Enums"]["incident_priority"]
+          regulatory_requirements: string[] | null
+          reporter_email: string | null
+          reporter_id: string | null
+          reporter_name: string | null
+          status: Database["public"]["Enums"]["incident_status"]
+          technical_details: Json | null
+          timeline: Json | null
+          title: string
+          type: Database["public"]["Enums"]["incident_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_id?: string | null
+          assigned_to_name?: string | null
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          evidence_ids?: string[] | null
+          id?: string
+          impact_assessment?: Json | null
+          notes?: Json | null
+          priority?: Database["public"]["Enums"]["incident_priority"]
+          regulatory_requirements?: string[] | null
+          reporter_email?: string | null
+          reporter_id?: string | null
+          reporter_name?: string | null
+          status?: Database["public"]["Enums"]["incident_status"]
+          technical_details?: Json | null
+          timeline?: Json | null
+          title: string
+          type?: Database["public"]["Enums"]["incident_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_id?: string | null
+          assigned_to_name?: string | null
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          evidence_ids?: string[] | null
+          id?: string
+          impact_assessment?: Json | null
+          notes?: Json | null
+          priority?: Database["public"]["Enums"]["incident_priority"]
+          regulatory_requirements?: string[] | null
+          reporter_email?: string | null
+          reporter_id?: string | null
+          reporter_name?: string | null
+          status?: Database["public"]["Enums"]["incident_status"]
+          technical_details?: Json | null
+          timeline?: Json | null
+          title?: string
+          type?: Database["public"]["Enums"]["incident_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -161,12 +304,22 @@ export type Database = {
       }
     }
     Enums: {
-      app_role:
-        | "admin"
-        | "reporter"
-        | "first_responder"
-        | "investigator"
-        | "manager"
+      analysis_status: "pending" | "analyzing" | "analyzed" | "archived"
+      app_role: "admin" | "manager" | "investigator" | "first_responder" | "reporter"
+      incident_priority: "critical" | "high" | "medium" | "low"
+      incident_status: "new" | "triage" | "investigation" | "contained" | "resolved" | "closed"
+      incident_type:
+        | "Website Defacement"
+        | "SQL Injection"
+        | "Data Breach"
+        | "DDoS Attack"
+        | "Malware Infection"
+        | "Phishing"
+        | "Unauthorized Access"
+        | "Credential Stuffing"
+        | "XSS Attack"
+        | "Other"
+      integrity_status: "verified" | "tampered" | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -39,7 +39,7 @@ const App = () => (
                   <Route path="/incidents" element={<IncidentList />} />
                   <Route path="/incidents/:id" element={<IncidentDetail />} />
                   <Route path="/tools" element={<ForensicTools />} />
-                  <Route path="/reports" element={<Analytics />} />
+                  <Route path="/analytics" element={<Analytics />} />
                   <Route path="/users" element={<UserManagement />} />
                   <Route path="/audit-logs" element={<AuditLogs />} />
                   <Route path="/settings" element={<Settings />} />
