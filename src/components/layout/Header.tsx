@@ -26,8 +26,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-sm border-b border-border">
       <div className="flex h-full items-center justify-between px-6">
-        {/* Search */}
-        <div className="flex items-center gap-4 flex-1 max-w-md">
+        {/* Left side - Empty for balance */}
+        <div className="flex-1" />
+
+        {/* Search - Center */}
+        <div className="flex items-center gap-4 flex-1 max-w-md justify-center">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -38,13 +41,11 @@ export function Header() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2 flex-1">
           {/* Theme Toggle */}
           <ThemeToggle />
-
           {/* Notifications - Real notifications only, no dummy data */}
           <NotificationPanel />
-
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
