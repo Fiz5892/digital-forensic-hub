@@ -1,7 +1,8 @@
+// src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://tabyowzzrnedlfswaimn.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhYnlvd3p6cm5lZGxmc3dhaW1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNTAxMjMsImV4cCI6MjA4MDgyNjEyM30._vNvpglADD5QzN8m-aar4aTMRddeTODrQkvuoLjf4hg'
+const supabaseUrl = 'https://cgvdwgdqawkvjehuqlao.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndmR3Z2RxYXdrdmplaHVxbGFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDA2NDMsImV4cCI6MjA4MTExNjY0M30.Usu3U5pM_RBCS9-xaQ9cxsPpnPP9Zhu2A0dwc7SE5Vw'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -91,6 +92,8 @@ export interface Database {
           file_size: number | null
           hash_md5: string | null
           hash_sha256: string | null
+          storage_path: string | null  // ✅ Kolom untuk path di Supabase Storage
+          storage_url: string | null   // ✅ Kolom untuk URL public
           collected_by_id: number
           collected_at: string
           current_custodian_id: number
@@ -98,6 +101,9 @@ export interface Database {
           analysis_status: 'pending' | 'analyzing' | 'analyzed' | 'archived'
           integrity_status: 'verified' | 'tampered' | 'unknown'
           description: string | null
+          tags: string[] | null        // ✅ Kolom untuk tags
+          custody_chain: any | null    // ✅ Kolom untuk chain of custody
+          analysis_results: any | null // ✅ Kolom untuk hasil analisis
         }
         Insert: {
           id: string
@@ -107,13 +113,18 @@ export interface Database {
           file_size?: number | null
           hash_md5?: string | null
           hash_sha256?: string | null
+          storage_path?: string | null
+          storage_url?: string | null
           collected_by_id: number
-          collected_at: string
+          collected_at?: string
           current_custodian_id: number
           storage_location?: string | null
           analysis_status?: 'pending' | 'analyzing' | 'analyzed' | 'archived'
           integrity_status?: 'verified' | 'tampered' | 'unknown'
           description?: string | null
+          tags?: string[] | null
+          custody_chain?: any | null
+          analysis_results?: any | null
         }
         Update: {
           id?: string
@@ -123,6 +134,8 @@ export interface Database {
           file_size?: number | null
           hash_md5?: string | null
           hash_sha256?: string | null
+          storage_path?: string | null
+          storage_url?: string | null
           collected_by_id?: number
           collected_at?: string
           current_custodian_id?: number
@@ -130,8 +143,16 @@ export interface Database {
           analysis_status?: 'pending' | 'analyzing' | 'analyzed' | 'archived'
           integrity_status?: 'verified' | 'tampered' | 'unknown'
           description?: string | null
+          tags?: string[] | null
+          custody_chain?: any | null
+          analysis_results?: any | null
         }
       }
     }
   }
 }
+
+// Helper types
+export type EvidenceRow = Database['public']['Tables']['evidence']['Row'];
+export type EvidenceInsert = Database['public']['Tables']['evidence']['Insert'];
+export type EvidenceUpdate = Database['public']['Tables']['evidence']['Update'];

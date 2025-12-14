@@ -1,7 +1,9 @@
+// src/components/incident/TimelineTab.tsx
 import { useState } from 'react';
 import { Incident, TimelineEvent } from '@/lib/types';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserCapabilities } from '@/config/routes.config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,15 +31,17 @@ import {
   Shield,
   FileCheck,
   PartyPopper,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logAudit } from '@/lib/auditLogger';
 
 interface TimelineTabProps {
   incident: Incident;
 }
 
-const eventTypeConfig = {
+const eventTypeConfig: Record<string, { icon: any; color: string; label: string }> = {
   detection: { icon: Search, color: 'bg-status-info', label: 'Detection' },
   report: { icon: FileText, color: 'bg-purple-500', label: 'Report' },
   assignment: { icon: Users, color: 'bg-status-medium', label: 'Assignment' },
@@ -58,32 +62,54 @@ export function TimelineTab({ incident }: TimelineTabProps) {
     timestamp: new Date().toISOString().slice(0, 16),
   });
 
+  const capabilities = user ? getUserCapabilities(user.role) : null;
+
   const sortedTimeline = [...incident.timeline].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
-  const handleAddEvent = () => {
-    if (!newEvent.event || !user) return;
+  const handleAddEvent = async () => {
+    if (!newEvent.event || !user) {
+      toast.error('Please provide event description');
+      return;
+    }
 
-    const newTimelineEvent: TimelineEvent = {
-      id: String(incident.timeline.length + 1),
-      timestamp: new Date(newEvent.timestamp).toISOString(),
-      event: newEvent.event,
-      type: newEvent.type,
-      user: user.name,
-    };
+    try {
+      const newTimelineEvent: TimelineEvent = {
+        id: String(incident.timeline.length + 1),
+        timestamp: new Date(newEvent.timestamp).toISOString(),
+        event: newEvent.event,
+        type: newEvent.type,
+        user: user.name,
+      };
 
-    updateIncident(incident.id, {
-      timeline: [...incident.timeline, newTimelineEvent],
-    });
+      await updateIncident(incident.id, {
+        timeline: [...incident.timeline, newTimelineEvent],
+      });
 
-    toast.success('Timeline event added');
-    setNewEvent({
-      event: '',
-      type: 'detection',
-      timestamp: new Date().toISOString().slice(0, 16),
-    });
-    setIsDialogOpen(false);
+      await logAudit({
+        action: 'add_timeline_event',
+        entity_type: 'incident',
+        entity_id: incident.id,
+        details: {
+          event_type: newEvent.type,
+          event_description: newEvent.event,
+          added_by: user.name,
+          role: user.role
+        }
+      });
+
+      toast.success('Timeline event added');
+      setNewEvent({
+        event: '',
+        type: 'detection',
+        timestamp: new Date().toISOString().slice(0, 16),
+      });
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error adding timeline event:', error);
+      toast.error('Failed to add timeline event');
+    }
   };
 
   return (
@@ -94,58 +120,64 @@ export function TimelineTab({ incident }: TimelineTabProps) {
           <h2 className="text-xl font-semibold">Incident Timeline</h2>
           <p className="text-muted-foreground">Chronological record of all incident events</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Timeline Event</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Event Type</Label>
-                <Select 
-                  value={newEvent.type} 
-                  onValueChange={(v) => setNewEvent({ ...newEvent, type: v as TimelineEvent['type'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(eventTypeConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        {config.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Timestamp</Label>
-                <Input
-                  type="datetime-local"
-                  value={newEvent.timestamp}
-                  onChange={(e) => setNewEvent({ ...newEvent, timestamp: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Event Description *</Label>
-                <Input
-                  placeholder="Describe what happened..."
-                  value={newEvent.event}
-                  onChange={(e) => setNewEvent({ ...newEvent, event: e.target.value })}
-                />
-              </div>
-              <Button onClick={handleAddEvent} className="w-full">
+        {capabilities?.canEdit && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
                 Add Event
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Timeline Event</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Event Type</Label>
+                  <Select 
+                    value={newEvent.type} 
+                    onValueChange={(v) => setNewEvent({ ...newEvent, type: v as TimelineEvent['type'] })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(eventTypeConfig).map(([key, config]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="flex items-center gap-2">
+                            <config.icon className="h-4 w-4" />
+                            {config.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Timestamp</Label>
+                  <Input
+                    type="datetime-local"
+                    value={newEvent.timestamp}
+                    onChange={(e) => setNewEvent({ ...newEvent, timestamp: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Event Description *</Label>
+                  <Input
+                    placeholder="Describe what happened..."
+                    value={newEvent.event}
+                    onChange={(e) => setNewEvent({ ...newEvent, event: e.target.value })}
+                  />
+                </div>
+                <Button onClick={handleAddEvent} className="w-full" disabled={!newEvent.event}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Event
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Timeline */}
@@ -157,7 +189,7 @@ export function TimelineTab({ incident }: TimelineTabProps) {
           {/* Timeline Events */}
           <div className="space-y-6">
             {sortedTimeline.map((event, index) => {
-              const config = eventTypeConfig[event.type];
+              const config = eventTypeConfig[event.type] || eventTypeConfig.detection;
               const IconComponent = config.icon;
 
               return (
@@ -190,8 +222,11 @@ export function TimelineTab({ incident }: TimelineTabProps) {
 
             {sortedTimeline.length === 0 && (
               <div className="text-center py-12">
-                <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">No timeline events yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Timeline events will be automatically added as the investigation progresses
+                </p>
               </div>
             )}
           </div>

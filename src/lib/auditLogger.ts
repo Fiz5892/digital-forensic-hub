@@ -2,10 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuditLogParams {
-  action: 'create' | 'update' | 'delete' | 'view' | 'login' | 'logout' | 'export' | 'assign' | 'transfer';
+  action: 'create' | 'update' | 'delete' | 'view' | 'login' | 'logout' | 'export' | 'assign' | 'transfer' | 'update_status' | 'add_note' | 'delete_note' | 'add_timeline_event' | 'transfer_custody' | 'upload_evidence' | 'quick_triage';
   entity_type: 'incident' | 'evidence' | 'user' | 'report' | 'auth' | 'custody';
   entity_id?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 /**

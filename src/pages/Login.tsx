@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,12 +65,23 @@ export default function Login() {
   
   const { login, signup, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // FIXED: Only redirect if already authenticated and not in loading state
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      navigate('/dashboard');
+    // Wait until auth state is fully resolved
+    if (!authLoading && isAuthenticated) {
+      // Use setTimeout to avoid "too many calls" error
+      const timer = setTimeout(() => {
+        // Get the intended destination or default to dashboard
+        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        console.log('🔄 Redirecting authenticated user to:', from);
+        navigate(from, { replace: true });
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +108,8 @@ export default function Login() {
         toast.success('Login berhasil', {
           description: 'Selamat datang di DFIR-Manager'
         });
-        navigate('/dashboard');
+        
+        // Navigation will be handled by useEffect after auth state updates
       }
     } catch (err) {
       setError('Terjadi kesalahan. Silakan coba lagi.');
@@ -166,6 +178,7 @@ export default function Login() {
     }
   };
 
+  // Show loading screen while checking auth state
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

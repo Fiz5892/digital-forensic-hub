@@ -10,24 +10,13 @@ interface AppUser {
   email: string;
   role: UserRole;
   department?: string;
-  phone?: string;
-}
-
-interface SignupOptions {
-  department?: string | null;
-  phone?: string | null;
 }
 
 interface AuthContextType {
   user: AppUser | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
-  signup: (
-    email: string, 
-    password: string, 
-    fullName: string,
-    options?: SignupOptions
-  ) => Promise<{ error: string | null }>;
+  signup: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -63,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: profile?.email || email,
         role: (roleData?.role as UserRole) || 'reporter',
         department: profile?.department || undefined,
-        phone: profile?.phone || undefined,
       };
 
       setUser(appUser);
@@ -140,25 +128,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = async (
-    email: string, 
-    password: string, 
-    fullName: string,
-    options?: SignupOptions
-  ): Promise<{ error: string | null }> => {
+  const signup = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      // Create auth user with metadata
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
-            department: options?.department || null,
-            phone: options?.phone || null,
           },
         },
       });
@@ -171,26 +151,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: 'Password minimal 6 karakter' };
         }
         return { error: error.message };
-      }
-
-      // If signup successful and user created, update profile with additional data
-      if (data.user && (options?.department || options?.phone)) {
-        // Wait a bit for the trigger to create the profile
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Update profile with department and phone
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            department: options.department || null,
-            phone: options.phone || null,
-          })
-          .eq('user_id', data.user.id);
-
-        if (updateError) {
-          console.error('Error updating profile:', updateError);
-          // Don't return error here, signup was successful
-        }
       }
 
       return { error: null };

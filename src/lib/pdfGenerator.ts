@@ -41,7 +41,7 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
     ['Type', incident.type],
     ['Priority', incident.priority.toUpperCase()],
     ['Status', incident.status.toUpperCase()],
-    ['Reporter', incident.reporter.name],
+    ['Reporter', incident.reporter?.name || 'Unknown'],
     ['Assigned To', incident.assigned_to?.name || 'Unassigned'],
     ['Created', format(new Date(incident.created_at), 'PPpp')],
     ['Last Updated', format(new Date(incident.updated_at), 'PPpp')],
@@ -62,6 +62,11 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
   yPos = (doc as any).lastAutoTable.finalY + 10;
 
   // Description
+  if (yPos > 240) {
+    doc.addPage();
+    yPos = 20;
+  }
+
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(26, 54, 93);
@@ -71,80 +76,103 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
-  const splitDescription = doc.splitTextToSize(incident.description, pageWidth - 28);
+  const splitDescription = doc.splitTextToSize(
+    incident.description || 'No description provided', 
+    pageWidth - 28
+  );
   doc.text(splitDescription, 14, yPos);
   yPos += splitDescription.length * 5 + 10;
 
   // Technical Details
-  if (yPos > 250) {
-    doc.addPage();
-    yPos = 20;
+  if (incident.technical_details && Object.keys(incident.technical_details).length > 0) {
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(26, 54, 93);
+    doc.text('TECHNICAL DETAILS', 14, yPos);
+    yPos += 8;
+
+    const technicalData = [];
+    if (incident.technical_details.target_url) {
+      technicalData.push(['Target URL', incident.technical_details.target_url]);
+    }
+    if (incident.technical_details.ip_address) {
+      technicalData.push(['IP Address', incident.technical_details.ip_address]);
+    }
+    if (incident.technical_details.server_os) {
+      technicalData.push(['Server OS', incident.technical_details.server_os]);
+    }
+    if (incident.technical_details.web_server) {
+      technicalData.push(['Web Server', incident.technical_details.web_server]);
+    }
+    if (incident.technical_details.cms) {
+      technicalData.push(['CMS', incident.technical_details.cms]);
+    }
+    if (incident.technical_details.database) {
+      technicalData.push(['Database', incident.technical_details.database]);
+    }
+
+    if (technicalData.length > 0) {
+      autoTable(doc, {
+        startY: yPos,
+        head: [],
+        body: technicalData,
+        theme: 'striped',
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 40 },
+          1: { cellWidth: 'auto' }
+        },
+        styles: { fontSize: 10 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
   }
-
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(26, 54, 93);
-  doc.text('TECHNICAL DETAILS', 14, yPos);
-  yPos += 8;
-
-  const technicalData = [
-    ['Target URL', incident.technical_details.target_url],
-    ['IP Address', incident.technical_details.ip_address],
-    ['Server OS', incident.technical_details.server_os],
-    ['Web Server', incident.technical_details.web_server],
-    ['CMS', incident.technical_details.cms],
-    ['Database', incident.technical_details.database],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [],
-    body: technicalData,
-    theme: 'striped',
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 40 },
-      1: { cellWidth: 'auto' }
-    },
-    styles: { fontSize: 10 }
-  });
-
-  yPos = (doc as any).lastAutoTable.finalY + 10;
 
   // Impact Assessment
-  if (yPos > 220) {
-    doc.addPage();
-    yPos = 20;
+  if (incident.impact_assessment) {
+    if (yPos > 220) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(26, 54, 93);
+    doc.text('IMPACT ASSESSMENT', 14, yPos);
+    yPos += 8;
+
+    const impactData = [
+      ['Confidentiality Impact', `${incident.impact_assessment.confidentiality}/5`],
+      ['Integrity Impact', `${incident.impact_assessment.integrity}/5`],
+      ['Availability Impact', `${incident.impact_assessment.availability}/5`],
+    ];
+
+    if (incident.impact_assessment.business_impact) {
+      impactData.push(['Business Impact', incident.impact_assessment.business_impact]);
+    }
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [],
+      body: impactData,
+      theme: 'striped',
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 50 },
+        1: { cellWidth: 'auto' }
+      },
+      styles: { fontSize: 10 }
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(26, 54, 93);
-  doc.text('IMPACT ASSESSMENT', 14, yPos);
-  yPos += 8;
-
-  const impactData = [
-    ['Confidentiality Impact', `${incident.impact_assessment.confidentiality}/5`],
-    ['Integrity Impact', `${incident.impact_assessment.integrity}/5`],
-    ['Availability Impact', `${incident.impact_assessment.availability}/5`],
-    ['Business Impact', incident.impact_assessment.business_impact],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [],
-    body: impactData,
-    theme: 'striped',
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 50 },
-      1: { cellWidth: 'auto' }
-    },
-    styles: { fontSize: 10 }
-  });
-
-  yPos = (doc as any).lastAutoTable.finalY + 10;
-
   // Timeline
-  if (incident.timeline.length > 0) {
+  if (incident.timeline && incident.timeline.length > 0) {
     if (yPos > 200) {
       doc.addPage();
       yPos = 20;
@@ -156,11 +184,11 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
     doc.text('INCIDENT TIMELINE', 14, yPos);
     yPos += 8;
 
-    const timelineData = incident.timeline.map(event => [
+    const timelineData = incident.timeline.map((event: any) => [
       format(new Date(event.timestamp), 'PPpp'),
-      event.type.toUpperCase(),
-      event.event,
-      event.user || '-'
+      event.type ? event.type.toUpperCase() : 'EVENT',
+      event.title || event.event || 'No description',
+      event.user || event.author || '-'
     ]);
 
     autoTable(doc, {
@@ -176,7 +204,7 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
   }
 
   // Evidence Summary
-  if (evidence.length > 0) {
+  if (evidence && evidence.length > 0) {
     if (yPos > 200) {
       doc.addPage();
       yPos = 20;
@@ -191,9 +219,9 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
     const evidenceData = evidence.map(e => [
       e.id,
       e.filename,
-      e.hash_sha256.substring(0, 16) + '...',
-      e.integrity_status.toUpperCase(),
-      e.analysis_status.toUpperCase()
+      e.hash_sha256 ? e.hash_sha256.substring(0, 16) + '...' : 'N/A',
+      e.integrity_status ? e.integrity_status.toUpperCase() : 'UNKNOWN',
+      e.analysis_status ? e.analysis_status.toUpperCase() : 'PENDING'
     ]);
 
     autoTable(doc, {
@@ -209,7 +237,7 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
   }
 
   // Notes
-  if (incident.notes.length > 0) {
+  if (incident.notes && incident.notes.length > 0) {
     if (yPos > 200) {
       doc.addPage();
       yPos = 20;
@@ -221,11 +249,11 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
     doc.text('INVESTIGATION NOTES', 14, yPos);
     yPos += 8;
 
-    const notesData = incident.notes.map(note => [
-      format(new Date(note.created_at), 'PPpp'),
-      note.category.toUpperCase(),
-      note.content,
-      note.created_by.name
+    const notesData = incident.notes.map((note: any) => [
+      format(new Date(note.created_at || note.timestamp), 'PPpp'),
+      note.category ? note.category.toUpperCase() : 'NOTE',
+      note.content || note.text || 'No content',
+      note.created_by?.name || note.author || 'Unknown'
     ]);
 
     autoTable(doc, {
@@ -237,6 +265,28 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
       styles: { fontSize: 8 },
       columnStyles: { 2: { cellWidth: 80 } }
     });
+  }
+
+  // Regulatory Requirements
+  if (incident.regulatory_requirements && incident.regulatory_requirements.length > 0) {
+    if (yPos > 230) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(26, 54, 93);
+    doc.text('REGULATORY REQUIREMENTS', 14, yPos);
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    const reqText = incident.regulatory_requirements.join(', ');
+    const splitReq = doc.splitTextToSize(reqText, pageWidth - 28);
+    doc.text(splitReq, 14, yPos);
   }
 
   // Footer on all pages
@@ -257,6 +307,12 @@ export const generateIncidentReport = (incident: Incident, evidence: Evidence[])
 };
 
 export const downloadIncidentReport = (incident: Incident, evidence: Evidence[]) => {
-  const doc = generateIncidentReport(incident, evidence);
-  doc.save(`${incident.id}-report.pdf`);
+  try {
+    const doc = generateIncidentReport(incident, evidence);
+    const filename = `${incident.id}-report.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error('Error generating PDF report:', error);
+    throw error;
+  }
 };
